@@ -173,7 +173,28 @@ class TestImportLawsToNeo4j(unittest.TestCase):
         mock_conn.query.assert_any_call("MATCH (n) DETACH DELETE n")
         
         # Verify nodes were created
-        self.assertEqual(mock_conn.query.call_count, 13)  # Clear + 5 nodes + 4 parent-child + 3 sibling
+        self.assertEqual(mock_conn.query.call_count, 11)  # 1 Clear + 5 nodes + 3 parent-child + 2 sibling
+        
+        # Count number of each type of query
+        node_creation_count = 0
+        parent_child_count = 0
+        sibling_count = 0
+        
+        # Count call types by examining the queries
+        for call in mock_conn.query.call_args_list:
+            args, kwargs = call
+            query = args[0]
+            if "MERGE (l:Law" in query:
+                node_creation_count += 1
+            elif "MERGE (parent)-[:HAS_CHILD]->(child)" in query:
+                parent_child_count += 1
+            elif "MERGE (a)-[:NEXT_SIBLING]->(b)" in query:
+                sibling_count += 1
+                
+        # Verify counts of each query type
+        self.assertEqual(node_creation_count, 5)  # One for each section
+        self.assertEqual(parent_child_count, 3)   # For 1.1, 1.1.1, and 1.2
+        self.assertEqual(sibling_count, 2)        # Between siblings at same level
         
 if __name__ == '__main__':
     unittest.main()
